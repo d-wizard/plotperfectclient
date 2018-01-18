@@ -244,7 +244,7 @@ void smartPlot_flush_all();
 /**************************************************************************
 Function:     smartPlot_deallocate_1D
 
-Description:  If you know you will you are done with a plot / curve name,
+Description:  If you know you are done with a plot / curve name,
               you can call this function to free up some memory.
 
               Using this function is probably only necessary if you are
@@ -257,7 +257,7 @@ void smartPlot_deallocate_1D( const char* plotName,
 /**************************************************************************
 Function:     smartPlot_deallocate_interleaved
 
-Description:  If you know you will you are done with a plot / curve name,
+Description:  If you know you are done with a plot / curve name,
               you can call this function to free up some memory.
 
               Using this function is probably only necessary if you are
