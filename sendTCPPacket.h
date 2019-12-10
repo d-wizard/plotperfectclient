@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2019 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -29,6 +29,14 @@
    #include <stdio.h>
    #include <winsock2.h>
    #include <windows.h>
+
+   // MinGW has some special issues with the <ws2tcpip.h> include (e.g finding getaddrinfo, freeaddrinfo)
+   #ifdef __MINGW32_VERSION
+      #if defined _WIN32_WINNT && _WIN32_WINNT < 0x0501 || !defined _WIN32_WINNT
+         #undef _WIN32_WINNT
+         #define _WIN32_WINNT 0x0501 // Make sure to compile against a not super old version.
+      #endif
+   #endif
    #include <ws2tcpip.h>
 
    #ifndef inline
@@ -53,9 +61,18 @@
 #endif
 
 
+// Define Macro for determining if a Socket FD is valid.
+#ifndef IS_VALID_SOCKET_FD
+#define IS_VALID_SOCKET_FD(socketFd) ((signed)socketFd >= 0)
+#endif
+
+#ifndef INVALID_SOCKET_FD
+#define INVALID_SOCKET_FD (-1)
+#endif
+
 static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
 {
-   SOCKET sockfd = -1; // Initialize to invalid value.
+   SOCKET sockfd = INVALID_SOCKET_FD; // Initialize to invalid value.
    struct addrinfo hints;
    struct addrinfo* serverInfoList;
    struct addrinfo* servInfo;
@@ -73,7 +90,12 @@ static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
    //hints.ai_flags = AI_PASSIVE; // use my IP
 
 #ifdef SEND_MSG_TCP_WIN_BUILD
+#ifdef __MINGW32_VERSION
+   snprintf( portStr, sizeof(portStr), "%d", port);
+#else
    _itoa_s( port, portStr, sizeof(portStr), 10);
+#endif
+
    WSAStartup(0x0101, &wsda);
 #else
    snprintf( portStr, sizeof(portStr), "%d", port);
@@ -82,7 +104,7 @@ static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
    returnErrorCode = getaddrinfo(hostName, portStr, &hints, &serverInfoList);
    if(returnErrorCode != 0)
    {
-      printf("getaddrinfo Error Code: %s\n", gai_strerror(returnErrorCode));
+      printf("getaddrinfo Error Code: %s\n", (char*)gai_strerror(returnErrorCode));
       return -1;
    }
 
@@ -93,7 +115,7 @@ static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
                                        servInfo->ai_socktype,
                                        servInfo->ai_protocol );
 
-      if(newConnectionFd >= 0)
+      if( IS_VALID_SOCKET_FD(newConnectionFd) )
       {
          if(connect(newConnectionFd, servInfo->ai_addr, (int)servInfo->ai_addrlen) >= 0)
          {
@@ -136,7 +158,7 @@ static inline int sendTCPPacket(const char* hostName, unsigned short port, const
    int success = 0;
    SOCKET sockfd = sendTCPPacket_init(hostName, port);
 
-   if((int)sockfd > -1)
+   if( IS_VALID_SOCKET_FD(sockfd) )
    {
       success = sendTCPPacket_send(sockfd, msg, msgSize) != -1;
 

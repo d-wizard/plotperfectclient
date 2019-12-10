@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2017 Dan Williams. All Rights Reserved.
+ * Copyright 2017 - 2019 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -159,6 +159,22 @@ void smartPlot_1D( const void* inDataToPlot,
                    const char* plotName,
                    const char* curveName );
 
+/**************************************************************************
+Function:     smartPlot_2D
+
+Description:  Pretty much the same as smartPlot_1D, but this function takes
+              in separate input data to plot for both X and Y axes and
+              generates a 2D plot.
+*/
+void smartPlot_2D( const void* inDataToPlotX,
+                   ePlotDataTypes inDataTypeX,
+                   const void* inDataToPlotY,
+                   ePlotDataTypes inDataTypeY,
+                   int inDataSize,
+                   int plotSize,
+                   int updateSize,
+                   const char* plotName,
+                   const char* curveName );
 
 /**************************************************************************
 Function:     smartPlot_groupMsgStart
@@ -233,6 +249,26 @@ static inline void smartPlot_flush_1D( const char* plotName,
 }
 
 /**************************************************************************
+Function:     smartPlot_flush_2D
+
+Description:  This function will send a plot message that contains all the
+              samples in the buffer.
+
+              A plot message will be sent within this function, unless there
+              are no samples in the buffer.
+
+Arguments:    These arguments are simply a subset of smartPlot_2D,
+              see the documentation for smartPlot_1D above.
+
+Returns:      None.
+*/
+static inline void smartPlot_flush_2D( const char* plotName,
+                                       const char* curveName )
+{
+   smartPlot_2D(NULL, E_INVALID_DATA_TYPE, NULL, E_INVALID_DATA_TYPE, 0, 0, 0, plotName, curveName);
+}
+
+/**************************************************************************
 Function:     smartPlot_flush_all
 
 Description:  Similar to smartPlot_flush_1D, but this function will flush all
@@ -242,7 +278,7 @@ Description:  Similar to smartPlot_flush_1D, but this function will flush all
 void smartPlot_flush_all();
 
 /**************************************************************************
-Function:     smartPlot_deallocate_1D
+Function:     smartPlot_deallocate
 
 Description:  If you know you are done with a plot / curve name,
               you can call this function to free up some memory.
@@ -251,8 +287,8 @@ Description:  If you know you are done with a plot / curve name,
               using many plot / curve name combinations.
 
 */
-void smartPlot_deallocate_1D( const char* plotName,
-                              const char* curveName );
+void smartPlot_deallocate( const char* plotName,
+                           const char* curveName );
 
 /**************************************************************************
 Function:     smartPlot_deallocate_interleaved

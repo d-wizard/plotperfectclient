@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017 - 2019 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -156,7 +156,7 @@ static void* smartPlot_flushThread(void* p_sleepBetweenFlush_ms)
 
 void smartPlot_networkConfigure(const char *hostName, const unsigned short port)
 {
-#ifdef PLOTTER_WINDOWS_BUILD
+#if defined PLOTTER_WINDOWS_BUILD && !defined __MINGW32_VERSION
    strncpy_s(g_plotHostName, sizeof(g_plotHostName), hostName, sizeof(g_plotHostName));
 #else
    strncpy(g_plotHostName, hostName, sizeof(g_plotHostName));
@@ -444,6 +444,155 @@ void smartPlot_1D( const void* inDataToPlot,
 
 }
 
+void smartPlot_2D( const void* inDataToPlotX,
+                   ePlotDataTypes inDataTypeX,
+                   const void* inDataToPlotY,
+                   ePlotDataTypes inDataTypeY,
+                   int inDataSize,
+                   int plotSize,
+                   int updateSize,
+                   const char* plotName,
+                   const char* curveName )
+{
+   tSmartPlotListElem* listElem = NULL;
+   tSendMemToPlot* plot = NULL;
+
+   // We can't make a new plot if the plot size or plot data type are not valid.
+   // If we are not making a new plot (i.e. the plot already exists) then these
+   // values do not need to be valid (we will just use the values that were used
+   // when the plot was created).
+   PLOTTER_BOOL newPlotParametersAreValid = (plotSize > 0 && isPlotDataTypeValid(inDataTypeX) && isPlotDataTypeValid(inDataTypeY));
+
+   PLOTTER_BOOL newPlot = smartPlot_find(plotName, curveName, &listElem, newPlotParametersAreValid);
+
+   if(listElem == NULL)
+   {
+      return;
+   }
+
+   plot = &listElem->cur;
+
+   if(newPlot)
+   {
+      int memberSizeX = PLOT_DATA_TYPE_SIZES[inDataTypeX];
+      int memberSizeY = PLOT_DATA_TYPE_SIZES[inDataTypeY];
+      void* newMemX = malloc(memberSizeX * plotSize);
+      void* newMemY = malloc(memberSizeY * plotSize);
+      if(NULL == newMemX || newMemY == NULL)
+         return;
+
+      plot->t_plotMem.b_arrayOfStructs = FALSE;
+      plot->t_plotMem.b_interleaved = FALSE;
+      plot->t_plotMem.e_dataType = inDataTypeX;
+      plot->t_plotMem.e_plotDim = E_PLOT_2D;
+      plot->t_plotMem.i_bytesBetweenValues = memberSizeX;
+      plot->t_plotMem.i_dataSizeBytes = memberSizeX;
+      plot->t_plotMem.i_numSamples = plotSize;
+      plot->t_plotMem.pc_memory = newMemX;
+
+      plot->t_plotMem_separateYAxis = plot->t_plotMem;
+      plot->t_plotMem_separateYAxis.e_dataType = inDataTypeY;
+      plot->t_plotMem_separateYAxis.i_bytesBetweenValues = memberSizeY;
+      plot->t_plotMem_separateYAxis.i_dataSizeBytes = memberSizeY;
+      plot->t_plotMem_separateYAxis.pc_memory = newMemY;
+
+      sendMemoryToPlot_Init( plot, g_plotHostName, g_plotPort, TRUE, plotName, curveName);
+   }
+   else if(plotSize != (int)plot->t_plotMem.i_numSamples && plotSize > 0 && isPlotDataTypeValid(plot->t_plotMem.e_dataType) && isPlotDataTypeValid(plot->t_plotMem_separateYAxis.e_dataType))
+   {
+      int memberSizeX = PLOT_DATA_TYPE_SIZES[plot->t_plotMem.e_dataType];
+      int memberSizeY = PLOT_DATA_TYPE_SIZES[plot->t_plotMem_separateYAxis.e_dataType];
+      char* oldMem_toFreeX = plot->t_plotMem.pc_memory;
+      char* oldMem_toFreeY = plot->t_plotMem_separateYAxis.pc_memory;
+      char* newMemX = NULL;
+      char* newMemY = NULL;
+
+      plot->i_readIndex = plot->i_writeIndex = 0;
+
+      newMemX = (char*)malloc(memberSizeX * plotSize);
+      newMemY = (char*)malloc(memberSizeY * plotSize);
+      if(NULL == newMemX || NULL == newMemY)
+         return;
+
+      plot->t_plotMem.pc_memory = newMemX;
+      plot->t_plotMem.i_numSamples = plotSize;
+      free(oldMem_toFreeX);
+
+      plot->t_plotMem_separateYAxis.pc_memory = newMemY;
+      plot->t_plotMem_separateYAxis.i_numSamples = plotSize;
+      free(oldMem_toFreeY);
+   }
+
+   {
+      int numSampToLeftToWrite = inDataSize;
+      int numSampWritten = 0;
+      int writeIndex = plot->i_writeIndex;
+      int numSampLeftForPlotSend;
+      char* writeLocationPtrX = plot->t_plotMem.pc_memory;
+      char* writeLocationPtrY = plot->t_plotMem_separateYAxis.pc_memory;
+      char* readLocationPtrX = (char*)inDataToPlotX;
+      char* readLocationPtrY = (char*)inDataToPlotY;
+      int memberSizeX = PLOT_DATA_TYPE_SIZES[plot->t_plotMem.e_dataType];
+      int memberSizeY = PLOT_DATA_TYPE_SIZES[plot->t_plotMem_separateYAxis.e_dataType];
+
+      int numSampAlreadyInBuff = (int)plot->i_writeIndex - (int)plot->i_readIndex;
+      if(numSampAlreadyInBuff < 0)
+         numSampAlreadyInBuff += plot->t_plotMem.i_numSamples;
+
+      // When update size is a negative number, no plot message should be sent.
+      // Set update size to a value large than the number of samples in the plot
+      // to ensure a message is not sent.
+      if(updateSize < 0)
+         updateSize = plot->t_plotMem.i_numSamples + 1;
+
+      numSampLeftForPlotSend = updateSize - numSampAlreadyInBuff;
+
+      while(numSampToLeftToWrite > 0)
+      {
+         int numSampToEnd = plot->t_plotMem.i_numSamples - writeIndex;
+         int numSampToWrite = (numSampToEnd < numSampToLeftToWrite) ? numSampToEnd : numSampToLeftToWrite;
+
+         memcpy( &writeLocationPtrX[memberSizeX * writeIndex],
+                 &readLocationPtrX[memberSizeX * numSampWritten],
+                 memberSizeX * numSampToWrite );
+         memcpy( &writeLocationPtrY[memberSizeY * writeIndex],
+                 &readLocationPtrY[memberSizeY * numSampWritten],
+                 memberSizeY * numSampToWrite );
+
+         numSampWritten += numSampToWrite;
+         numSampToLeftToWrite -= numSampToWrite;
+         writeIndex += numSampToWrite;
+         if(writeIndex >= (int)plot->t_plotMem.i_numSamples)
+         {
+            writeIndex = 0;
+         }
+      }
+
+      plot->i_writeIndex = writeIndex;
+
+
+      // Never update plot if update size is greater than the plot size.
+      if(plot->t_plotMem.i_numSamples >= (unsigned int)updateSize)
+      {
+         if( (numSampAlreadyInBuff + numSampWritten) >= (int)plot->t_plotMem.i_numSamples )
+         {
+            // More samples need to be updated than size of the plot, send Create message (which will
+            // send all the samples in the plot).
+            sendMemoryToPlot_Create2D(plot);
+
+            // By sending the Create plot, all the data has been read. Set the read index to the write index.
+            plot->i_readIndex = plot->i_writeIndex;
+         }
+         else if(numSampWritten >= numSampLeftForPlotSend)
+         {
+            sendMemoryToPlot(plot);
+         }
+      }
+
+   }
+
+}
+
 
 void smartPlot_flush_all()
 {
@@ -462,6 +611,11 @@ void smartPlot_flush_all()
                                             smartPlotList->cur.pc_curveName, // X Axis
                                             smartPlotList->interleavedPair->cur.pc_curveName ); // Y Axis
             }
+         }
+         else if(smartPlotList->cur.t_plotMem.e_plotDim == E_PLOT_2D)
+         {
+            // This is NOT an interleaved plot, flush as 2D.
+            smartPlot_flush_2D(smartPlotList->cur.pc_plotName, smartPlotList->cur.pc_curveName);
          }
          else
          {
@@ -486,8 +640,8 @@ void smartPlot_groupMsgEnd()
 }
 
 
-void smartPlot_deallocate_1D( const char* plotName,
-                              const char* curveName )
+void smartPlot_deallocate( const char* plotName,
+                           const char* curveName )
 {
    tSmartPlotListElem* listElem = NULL;
    plotThreading_mutexLock(&gt_smartPlotList_mutex);
@@ -523,6 +677,11 @@ void smartPlot_deallocate_1D( const char* plotName,
       if(listElem->interleavedPair == NULL || listElem->interleaved_isXAxis)
       {
          free(listElem->cur.t_plotMem.pc_memory);
+         if(listElem->cur.t_plotMem.e_plotDim == E_PLOT_2D)
+         {
+            // Need to free Y axis of 2D plot.
+            free(listElem->cur.t_plotMem_separateYAxis.pc_memory);
+         }
       }
       free(listElem);
    }
@@ -534,8 +693,8 @@ void smartPlot_deallocate_interleaved( const char* plotName,
                                        const char* curveName_x,
                                        const char* curveName_y)
 {
-   smartPlot_deallocate_1D(plotName, curveName_x);
-   smartPlot_deallocate_1D(plotName, curveName_y);
+   smartPlot_deallocate(plotName, curveName_x);
+   smartPlot_deallocate(plotName, curveName_y);
 }
 
 void smartPlot_createFlushThread(unsigned int sleepBetweenFlush_ms)
