@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -24,38 +24,70 @@
 #ifndef TIMEPLOT_H_
 #define TIMEPLOT_H_
 
-#if (defined(_WIN32) || defined(__WIN32__))
-   #include "winTimeSpec.h"
-#else
-   #include <time.h>
-#endif
 
 #include "smartPlotMessage.h"
 
 
-static inline void timePlot_init(const char* plotName, const char* curveName, int plotSize)
+/**************************************************************************
+Function:     timePlot_1D
+
+Description:  Adds a plot point with the current time as the Y Axis point.
+              Time is Monotonic / Steady Clock time (i.e. time since boot).
+
+              See smartPlot_1D Description in smartPlotMessage.h for more
+              info about the input parameters.
+*/
+static inline void timePlot_1D(int plotSize, int updateSize, const char* plotName, const char* curveName)
 {
-   ePlotDataTypes timeStructType = sizeof(struct timespec) <= 8 ? E_TIME_STRUCT_64 : E_TIME_STRUCT_128; // Determine if timespec is 8 bytes or 16 bytes.
-   smartPlot_1D(NULL, timeStructType, 0, plotSize, -1, plotName, curveName);
+   tSmartPlotTime nowTime;
+   smartPlot_getTime(&nowTime);
+   smartPlot_1D(&nowTime, E_TIME_STRUCT_AUTO, 1, plotSize, updateSize, plotName, curveName);
 }
 
-static inline void timePlot_getTime(const char* plotName, const char* curveName, int updateSize)
+/**************************************************************************
+Function:     timePlot_2D
+
+Description:  Adds a plot point with the current time as the X Axis point and
+              the value passed in as the Y Axis point.
+              Time is Monotonic / Steady Clock time (i.e. time since boot).
+
+              See smartPlot_2D Description in smartPlotMessage.h for more
+              info about the input parameters.
+*/
+static inline void timePlot_2D(
+   const void* inDataToPlotY,
+   ePlotDataTypes inDataTypeY,
+   int plotSize,
+   int updateSize,
+   const char* plotName,
+   const char* curveName)
 {
-   struct timespec nowTime;
-   clock_gettime(CLOCK_MONOTONIC, &nowTime);
-   smartPlot_1D(&nowTime, (ePlotDataTypes)-1, 1, 0, updateSize, plotName, curveName);
+   tSmartPlotTime nowTime;
+   smartPlot_getTime(&nowTime);
+   smartPlot_2D(&nowTime, E_TIME_STRUCT_AUTO, inDataToPlotY, inDataTypeY, 1, plotSize, updateSize, plotName, curveName);
 }
 
-static inline void timePlot_update(const char* plotName, const char* curveName, int updateSize)
-{
-   smartPlot_1D(NULL, (ePlotDataTypes)-1, 0, 0, updateSize, plotName, curveName);
-}
+/**************************************************************************
+Function:     timePlot_2D_Int
 
-static inline void timePlot_plotAll(const char* plotName, const char* curveName)
-{
-   smartPlot_1D(NULL, (ePlotDataTypes)-1, 0, 0, 0, plotName, curveName);
-}
+Description:  Adds a plot point with the current time as the X Axis point and
+              the value passed in (signed 32 bit integer) as the Y Axis point.
+              Time is Monotonic / Steady Clock time (i.e. time since boot).
 
+              See smartPlot_2D Description in smartPlotMessage.h for more
+              info about the input parameters.
+*/
+static inline void timePlot_2D_Int(
+   long num,
+   int plotSize,
+   int updateSize,
+   const char* plotName,
+   const char* curveName)
+{
+   tSmartPlotTime nowTime;
+   smartPlot_getTime(&nowTime);
+   smartPlot_2D(&nowTime, E_TIME_STRUCT_AUTO, &num, E_INT_32, 1, plotSize, updateSize, plotName, curveName);
+}
 
 
 #endif /* TIMEPLOT_H_ */

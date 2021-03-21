@@ -1,4 +1,4 @@
-/* Copyright 2017 - 2019 Dan Williams. All Rights Reserved.
+/* Copyright 2017 - 2019, 2021 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -25,6 +25,12 @@
 #include "plotThreading.h"
 #include "sendTCPPacket.h"
 
+#ifdef TIME_PLOT_WINDOWS
+#include <windows.h>
+#pragma comment(lib, "wsock32.lib")
+#else
+#include <time.h>
+#endif
 
 //*****************************************************************************
 // Preprocessor Directives
@@ -721,6 +727,27 @@ void smartPlot_createFlushThread_withPriorityPolicy(unsigned int sleepBetweenFlu
    }
 }
 
+void smartPlot_getTime(tSmartPlotTime* pTime)
+{
+#ifdef TIME_PLOT_WINDOWS
+   static int needsInit = 1;
+   static LARGE_INTEGER winTimeSpec_ticksPerSec;
+   if(needsInit)
+   {
+      WSADATA wsda;
+      needsInit = 0;
+      WSAStartup(0x0101, &wsda);
+      QueryPerformanceFrequency(&winTimeSpec_ticksPerSec);
+   }
+
+   LARGE_INTEGER curTick;
+   QueryPerformanceCounter(&curTick);
+   pTime->tv_sec = (curTick.QuadPart / winTimeSpec_ticksPerSec.QuadPart);
+   pTime->tv_nsec = (((curTick.QuadPart - (pTime->tv_sec*winTimeSpec_ticksPerSec.QuadPart)) * 1000000000) / winTimeSpec_ticksPerSec.QuadPart);
+#else
+   clock_gettime(CLOCK_MONOTONIC, pTime);
+#endif
+}
 
 
 

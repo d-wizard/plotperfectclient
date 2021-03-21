@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2017 - 2019 Dan Williams. All Rights Reserved.
+ * Copyright 2017 - 2019, 2021 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -35,6 +35,9 @@
    #define inline __inline // Windows doesn't use the inline keyword, instead it uses __inline
 #endif
 
+#if (defined(_WIN32) || defined(__WIN32__))
+#define TIME_PLOT_WINDOWS
+#endif
 
 //*****************************************************************************
 // Types
@@ -56,6 +59,17 @@ typedef enum
    E_INVALID_DATA_TYPE
 }ePlotDataTypes;
 
+// Time struct may not always exist. Abstract it with tSmartPlotTime.
+#ifdef TIME_PLOT_WINDOWS
+typedef struct
+{
+   long long tv_sec;
+   long long tv_nsec;
+}tSmartPlotTime;
+#else
+typedef struct timespec tSmartPlotTime;
+#endif
+#define E_TIME_STRUCT_AUTO (sizeof(tSmartPlotTime) <= 8 ? E_TIME_STRUCT_64 : E_TIME_STRUCT_128) // This can be used when size of timespec is unknown.
 
 #ifdef __cplusplus
 extern "C" {
@@ -345,6 +359,18 @@ Arguments:    sleepBetweenFlush_ms - How often to wake up the thread and
 Returns:      None.
 */
 void smartPlot_createFlushThread_withPriorityPolicy(unsigned int sleepBetweenFlush_ms, int priority, int policy);
+
+/**************************************************************************
+Function:     smartPlot_getTime
+
+Description:  Fills in the structure passed in with the current time.
+              This is Monotonic / Steady Clock time (i.e. time since boot).
+
+Arguments:    pTime (Out) - Pointer to the time struct that will be filled in.
+
+Returns:      None.
+*/
+void smartPlot_getTime(tSmartPlotTime* pTime);
 
 #ifdef __cplusplus
 }
