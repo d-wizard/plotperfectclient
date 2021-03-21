@@ -1,4 +1,4 @@
-/* Copyright 2017, 2019 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2019-2020 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -70,7 +70,8 @@
 #define INVALID_SOCKET_FD (-1)
 #endif
 
-static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
+// There are situations where we don't want to print that a connection failed over and over. Allow the user to specify if an error should be printed.
+static inline int sendTCPPacket_init_and_print(const char* hostName, unsigned short port, int printConnectFail)
 {
    SOCKET sockfd = INVALID_SOCKET_FD; // Initialize to invalid value.
    struct addrinfo hints;
@@ -131,7 +132,7 @@ static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
    }
 
    // Check if a connection was actually made.
-   if(servInfo == NULL)
+   if(servInfo == NULL && printConnectFail)
    {
       printf("Client failed to connect to server.\n");
    }
@@ -142,6 +143,11 @@ static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
 
 }
 
+
+static inline int sendTCPPacket_init(const char* hostName, unsigned short port)
+{
+   return sendTCPPacket_init_and_print(hostName, port, 1);
+}
 
 static inline int sendTCPPacket_send(SOCKET sockfd, const char* msg, unsigned int msgSize)
 {
