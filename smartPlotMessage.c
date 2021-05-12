@@ -220,7 +220,7 @@ void smartPlot_interleaved( const void* inDataToPlot,
       plot_x->t_plotMem.i_bytesBetweenValues = 2 * memberSize;
       plot_x->t_plotMem.i_dataSizeBytes = memberSize;
       plot_x->t_plotMem.i_numSamples = plotSize;
-      plot_x->t_plotMem.pc_memory = newMem;
+      plot_x->t_plotMem.pc_memory = (char*)newMem;
 
       // plot_y will be the same exept for the start position of the first member
       plot_y->t_plotMem = plot_x->t_plotMem;
@@ -366,7 +366,7 @@ void smartPlot_1D( const void* inDataToPlot,
       plot->t_plotMem.i_bytesBetweenValues = memberSize;
       plot->t_plotMem.i_dataSizeBytes = memberSize;
       plot->t_plotMem.i_numSamples = plotSize;
-      plot->t_plotMem.pc_memory = newMem;
+      plot->t_plotMem.pc_memory = (char*)newMem;
 
       sendMemoryToPlot_Init( plot, g_plotHostName, g_plotPort, TRUE, plotName, curveName);
    }
@@ -494,13 +494,13 @@ void smartPlot_2D( const void* inDataToPlotX,
       plot->t_plotMem.i_bytesBetweenValues = memberSizeX;
       plot->t_plotMem.i_dataSizeBytes = memberSizeX;
       plot->t_plotMem.i_numSamples = plotSize;
-      plot->t_plotMem.pc_memory = newMemX;
+      plot->t_plotMem.pc_memory = (char*)newMemX;
 
       plot->t_plotMem_separateYAxis = plot->t_plotMem;
       plot->t_plotMem_separateYAxis.e_dataType = inDataTypeY;
       plot->t_plotMem_separateYAxis.i_bytesBetweenValues = memberSizeY;
       plot->t_plotMem_separateYAxis.i_dataSizeBytes = memberSizeY;
-      plot->t_plotMem_separateYAxis.pc_memory = newMemY;
+      plot->t_plotMem_separateYAxis.pc_memory = (char*)newMemY;
 
       sendMemoryToPlot_Init( plot, g_plotHostName, g_plotPort, TRUE, plotName, curveName);
    }

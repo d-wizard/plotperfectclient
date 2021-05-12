@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -22,6 +22,13 @@
 #include "plotMsgTypes.h"
 
 typedef void *(*plotThreading_threadCallback)(void *);
+
+#if defined PLOTTER_WINDOWS_BUILD && defined __cplusplus && !defined WINDOWS_USE_PTHREADS
+   #ifndef PLOT_THREADING_USE_CPP11_TYPES // Using C++ threads is the default for Windows builds (unless WINDOWS_USE_PTHREADS is defined)
+      #define PLOT_THREADING_USE_CPP11_TYPES
+   #endif
+#endif
+
 
 #ifdef PLOT_THREADING_USE_CPP11_TYPES
    #ifndef __cplusplus
@@ -52,7 +59,7 @@ typedef void *(*plotThreading_threadCallback)(void *);
       // C++11 threads have no concept of priority / policy.
       (void)priority;
       (void)policy;
-      plotThreading_createNewThread(threadCallback, usrPtr);
+      return plotThreading_createNewThread(threadCallback, usrPtr);
    }
 
    static inline void plotThreading_mutexLock(tPlotMutex* mutex)

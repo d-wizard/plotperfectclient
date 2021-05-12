@@ -31,7 +31,7 @@
 #include <stddef.h> /* for NULL */
 
 
-#if (defined(_WIN32) || defined(__WIN32__)) && (!defined inline)
+#if (defined(_WIN32) || defined(__WIN32__)) && (!defined inline) && (!defined __cplusplus)
    #define inline __inline // Windows doesn't use the inline keyword, instead it uses __inline
 #endif
 

@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -25,7 +25,7 @@
 
 #define PLOT_MSG_SIZE_TYPE PLOTTER_UINT_32
 
-#ifdef PLOTTER_WINDOWS_BUILD
+#if defined PLOTTER_WINDOWS_BUILD && !defined __cplusplus
    #ifndef inline
       #define inline __inline
    #endif
