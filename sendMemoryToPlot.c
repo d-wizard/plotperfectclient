@@ -146,11 +146,11 @@ static void plotMsgGroupAdd(tSendMemToPlot* _this, const char* msg, unsigned int
    g_groupPlot_curSize += size;
 }
 
-inline void packArrayOfStructs( void* dest,
-                                void* srcArray,
-                                unsigned int numSamples,
-                                unsigned int dataSize,
-                                unsigned int bytesBetweenValues )
+static inline void packArrayOfStructs( void* dest,
+                                       void* srcArray,
+                                       unsigned int numSamples,
+                                       unsigned int dataSize,
+                                       unsigned int bytesBetweenValues )
 {
    char* pc_dst = (char*)dest;
    char* pc_src = ((char*)srcArray);
