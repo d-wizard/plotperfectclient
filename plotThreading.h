@@ -1,4 +1,4 @@
-/* Copyright 2017, 2021 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021 - 2022 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -23,12 +23,28 @@
 
 typedef void *(*plotThreading_threadCallback)(void *);
 
-#if defined PLOTTER_WINDOWS_BUILD && defined __cplusplus && !defined WINDOWS_USE_PTHREADS
+// Manually define whether pthreads are available based on platform
+#ifndef PLOTTER_PTHREADS_AVAILABLE
+   #ifdef __unix__
+      #define PLOTTER_PTHREADS_AVAILABLE
+   #endif
+#endif
+
+// Determine whether to use C++11 threads or pthreads
+#if defined __cplusplus && !defined PLOTTER_FORCE_PTHREADS
    #ifndef PLOT_THREADING_USE_CPP11_TYPES // Using C++ threads is the default for Windows builds (unless WINDOWS_USE_PTHREADS is defined)
       #define PLOT_THREADING_USE_CPP11_TYPES
    #endif
 #endif
 
+// Struct that defines some settings for the Plotting Background Thread.
+typedef struct
+{
+   unsigned int timeBetweenMs;
+   int setPriorityPolicy;
+   int priority;
+   int policy;
+}tPlotThreadParams;
 
 #ifdef PLOT_THREADING_USE_CPP11_TYPES
    #ifndef __cplusplus
@@ -45,21 +61,28 @@ typedef void *(*plotThreading_threadCallback)(void *);
 
    #define CREATE_PLOT_MUTEX(variableName) tPlotMutex variableName
 
-   static inline tPlotThread* plotThreading_createNewThread(plotThreading_threadCallback threadCallback, void* usrPtr)
+   static inline tPlotThread* plotThreading_createNewThread(plotThreading_threadCallback threadCallback, unsigned int timeBetweenMs)
    {
-      return new tPlotThread(threadCallback, usrPtr);
+      tPlotThreadParams* threadParams = new tPlotThreadParams;
+      threadParams->timeBetweenMs = timeBetweenMs;
+      threadParams->setPriorityPolicy = 0;
+
+      return new tPlotThread(threadCallback, threadParams);
    }
 
    static inline tPlotThread* plotThreading_createNewThread_withPriorityPolicy(
          plotThreading_threadCallback threadCallback,
-         void* usrPtr,
+         unsigned int timeBetweenMs,
          int priority,
          int policy )
    {
-      // C++11 threads have no concept of priority / policy.
-      (void)priority;
-      (void)policy;
-      return plotThreading_createNewThread(threadCallback, usrPtr);
+      tPlotThreadParams* threadParams = new tPlotThreadParams;
+      threadParams->timeBetweenMs = timeBetweenMs;
+      threadParams->setPriorityPolicy = 1;
+      threadParams->priority = priority;
+      threadParams->policy = policy;
+
+      return new tPlotThread(threadCallback, threadParams);
    }
 
    static inline void plotThreading_mutexLock(tPlotMutex* mutex)
@@ -80,13 +103,17 @@ typedef void *(*plotThreading_threadCallback)(void *);
 
    #define CREATE_PLOT_MUTEX(variableName) tPlotMutex variableName = PTHREAD_MUTEX_INITIALIZER
 
-   static inline tPlotThread* plotThreading_createNewThread(plotThreading_threadCallback threadCallback, void* usrPtr)
+   static inline tPlotThread* plotThreading_createNewThread(plotThreading_threadCallback threadCallback, unsigned int timeBetweenMs)
    {
       tPlotThread* newThread = (tPlotThread*)malloc(sizeof(tPlotThread));
+      tPlotThreadParams* threadParams = (tPlotThreadParams*)malloc(sizeof(tPlotThreadParams));
+
+      threadParams->timeBetweenMs = timeBetweenMs;
+      threadParams->setPriorityPolicy = 0;
 
       if(newThread != NULL)
       {
-         pthread_create(newThread, NULL, threadCallback, usrPtr);
+         pthread_create(newThread, NULL, threadCallback, threadParams);
       }
 
       return newThread;
@@ -94,11 +121,17 @@ typedef void *(*plotThreading_threadCallback)(void *);
 
    static inline tPlotThread* plotThreading_createNewThread_withPriorityPolicy(
          plotThreading_threadCallback threadCallback,
-         void* usrPtr,
+         unsigned int timeBetweenMs,
          int priority,
          int policy )
    {
       tPlotThread* newThread = (tPlotThread*)malloc(sizeof(tPlotThread));
+      tPlotThreadParams* threadParams = (tPlotThreadParams*)malloc(sizeof(tPlotThreadParams));
+
+      threadParams->timeBetweenMs = timeBetweenMs;
+      threadParams->setPriorityPolicy = 1;
+      threadParams->priority = priority;
+      threadParams->policy = policy;
 
       if(newThread != NULL)
       {
@@ -111,7 +144,7 @@ typedef void *(*plotThreading_threadCallback)(void *);
          pthread_attr_setschedpolicy(&t_threadAttr, policy);
          pthread_attr_setschedparam(&t_threadAttr, &t_schedParam);
 
-         pthread_create(newThread, &t_threadAttr, threadCallback, usrPtr);
+         pthread_create(newThread, &t_threadAttr, threadCallback, threadParams);
       }
 
       return newThread;

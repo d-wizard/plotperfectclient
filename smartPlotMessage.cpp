@@ -1,4 +1,4 @@
-/* Copyright 2017 - 2019, 2021 Dan Williams. All Rights Reserved.
+/* Copyright 2017 - 2019, 2021 - 2022 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -62,6 +62,19 @@ static CREATE_PLOT_MUTEX(gt_smartPlotList_mutex);
 
 static char g_plotHostName[MAX_IP_ADDR_STRING_SIZE] = "plotter";
 static unsigned short g_plotPort = 2000;
+
+
+// Parameters for dealing with the background plot thread.
+static PLOTTER_BOOL g_plotThread_created = FALSE;
+static unsigned int g_plotThread_defaultTimeMs = 250;
+static CREATE_PLOT_MUTEX(g_plotThread_onlyOnePlotThread);
+
+#ifdef PLOTTER_FORCE_BACKGROUND_THREAD
+static PLOTTER_BOOL g_plotThread_forcePlotToThread = TRUE;
+#else
+static PLOTTER_BOOL g_plotThread_forcePlotToThread = FALSE;
+#endif
+
 
 //*****************************************************************************
 // Local Functions
@@ -141,19 +154,52 @@ static PLOTTER_BOOL smartPlot_find(const char* plotName, const char* curveName, 
    return newPlot;
 }
 
-static void* smartPlot_flushThread(void* p_sleepBetweenFlush_ms)
+static void* smartPlot_flushThread(void* p_threadParams)
 {
-   unsigned int sleepBetweenFlush_ms = *((unsigned int*)p_sleepBetweenFlush_ms);
+   tPlotThreadParams threadParams = *((tPlotThreadParams*)p_threadParams);
+
+#ifdef PLOTTER_PTHREADS_AVAILABLE
+   pthread_t thisPthread = pthread_self();
+
+   // Set Priority / Policy
+   if(threadParams.setPriorityPolicy)
+   {
+      struct sched_param schedParam;
+      schedParam.sched_priority = threadParams.priority;
+      pthread_setschedparam(thisPthread, threadParams.policy, &schedParam);
+   }
+#endif
+
+   plotThreading_mutexLock(&g_plotThread_onlyOnePlotThread); // Lock this one time and never unlock to ensure only 1 thread.
+
    while(1)
    {
 #ifdef PLOTTER_WINDOWS_BUILD
-      Sleep(sleepBetweenFlush_ms);
+      Sleep(threadParams.timeBetweenMs);
 #else
-      usleep(sleepBetweenFlush_ms*1000);
+      usleep(threadParams.timeBetweenMs*1000);
 #endif
       smartPlot_flush_all();
    }
    return NULL;
+}
+
+static void smartPlot_autoStartThread(int* updateSize)
+{
+   if(g_plotThread_forcePlotToThread)
+   {
+      // Create the background plotting thread if it hasn't already been created.
+      if(!g_plotThread_created)
+      {
+         smartPlot_createFlushThread(g_plotThread_defaultTimeMs);
+      }
+
+      // If forcing plots to the thread, change the update size to -1 (i.e. plot on the thread)
+      if(*updateSize > 0) // if update size is 0, this is likely being run on the plotter thread.
+      {
+         *updateSize = -1; // Don't plot on this thread, plot on the background thread.
+      }
+   }
 }
 
 //*****************************************************************************
@@ -195,6 +241,9 @@ void smartPlot_interleaved( const void* inDataToPlot,
 
    PLOTTER_BOOL newPlot_x = smartPlot_find(plotName, curveName_x, &listElem_x, newPlotParametersAreValid);
    PLOTTER_BOOL newPlot_y = smartPlot_find(plotName, curveName_y, &listElem_y, newPlotParametersAreValid);
+
+   // Check if we need to force this plot message to be sent from a background thread.
+   smartPlot_autoStartThread(&updateSize);
 
    assert(newPlot_x == newPlot_y); // If the are inequal, something is wrong.
 
@@ -345,6 +394,9 @@ void smartPlot_1D( const void* inDataToPlot,
 
    PLOTTER_BOOL newPlot = smartPlot_find(plotName, curveName, &listElem, newPlotParametersAreValid);
 
+   // Check if we need to force this plot message to be sent from a background thread.
+   smartPlot_autoStartThread(&updateSize);
+
    if(listElem == NULL)
    {
       return;
@@ -470,6 +522,9 @@ void smartPlot_2D( const void* inDataToPlotX,
    PLOTTER_BOOL newPlotParametersAreValid = (plotSize > 0 && isPlotDataTypeValid(inDataTypeX) && isPlotDataTypeValid(inDataTypeY));
 
    PLOTTER_BOOL newPlot = smartPlot_find(plotName, curveName, &listElem, newPlotParametersAreValid);
+
+   // Check if we need to force this plot message to be sent from a background thread.
+   smartPlot_autoStartThread(&updateSize);
 
    if(listElem == NULL)
    {
@@ -705,26 +760,14 @@ void smartPlot_deallocate_interleaved( const char* plotName,
 
 void smartPlot_createFlushThread(unsigned int sleepBetweenFlush_ms)
 {
-   // Allocate new memory. No need to worry about deleting since this is exected to exist for the entire lifetime of the execuatable.
-   unsigned int* newThread_sleepBetweenFlush_ms = (unsigned int*)malloc(sizeof(unsigned int));
-   if(newThread_sleepBetweenFlush_ms != NULL)
-   {
-      *newThread_sleepBetweenFlush_ms = sleepBetweenFlush_ms;
-
-      plotThreading_createNewThread(smartPlot_flushThread, newThread_sleepBetweenFlush_ms);
-   }
+   g_plotThread_created = TRUE;
+   plotThreading_createNewThread(smartPlot_flushThread, sleepBetweenFlush_ms);
 }
 
 void smartPlot_createFlushThread_withPriorityPolicy(unsigned int sleepBetweenFlush_ms, int priority, int policy)
 {
-   // Allocate new memory. No need to worry about deleting since this is exected to exist for the entire lifetime of the execuatable.
-   unsigned int* newThread_sleepBetweenFlush_ms = (unsigned int*)malloc(sizeof(unsigned int));
-   if(newThread_sleepBetweenFlush_ms != NULL)
-   {
-      *newThread_sleepBetweenFlush_ms = sleepBetweenFlush_ms;
-
-      plotThreading_createNewThread_withPriorityPolicy(smartPlot_flushThread, newThread_sleepBetweenFlush_ms, priority, policy);
-   }
+   g_plotThread_created = TRUE;
+   plotThreading_createNewThread_withPriorityPolicy(smartPlot_flushThread, sleepBetweenFlush_ms, priority, policy);
 }
 
 void smartPlot_getTime(tSmartPlotTime* pTime)
