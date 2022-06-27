@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2017 - 2019, 2021 Dan Williams. All Rights Reserved.
+ * Copyright 2017 - 2019, 2021 - 2022 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -88,6 +88,22 @@ Arguments:    hostName - Host name or IP address of the PlotGUI server.
 Returns:      None.
 */
 void smartPlot_networkConfigure(const char *hostName, const unsigned short port);
+
+/**************************************************************************
+Function:     smartPlot_forceBackgroundThread
+
+Description:  Forces plot messages to be send from a background thread. This
+              is useful to reduce the impact of plotting data from high priority
+              threads.
+
+              This does the same thing as defining PLOTTER_FORCE_BACKGROUND_THREAD
+              at compile time. 
+
+Arguments:    None.
+
+Returns:      None.
+*/
+void smartPlot_forceBackgroundThread();
 
 /**************************************************************************
 Function:     smartPlot_interleaved

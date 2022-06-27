@@ -23,7 +23,7 @@
 
 typedef void *(*plotThreading_threadCallback)(void *);
 
-// Manually define whether pthreads are available based on platform
+// Define whether pthreads are available based on platform
 #ifndef PLOTTER_PTHREADS_AVAILABLE
    #ifdef __unix__
       #define PLOTTER_PTHREADS_AVAILABLE
@@ -32,7 +32,7 @@ typedef void *(*plotThreading_threadCallback)(void *);
 
 // Determine whether to use C++11 threads or pthreads
 #if defined __cplusplus && !defined PLOTTER_FORCE_PTHREADS
-   #ifndef PLOT_THREADING_USE_CPP11_TYPES // Using C++ threads is the default for Windows builds (unless WINDOWS_USE_PTHREADS is defined)
+   #ifndef PLOT_THREADING_USE_CPP11_TYPES
       #define PLOT_THREADING_USE_CPP11_TYPES
    #endif
 #endif

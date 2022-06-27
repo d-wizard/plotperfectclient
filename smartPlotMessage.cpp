@@ -218,6 +218,10 @@ void smartPlot_networkConfigure(const char *hostName, const unsigned short port)
    g_plotPort = port;
 }
 
+void smartPlot_forceBackgroundThread()
+{
+   g_plotThread_forcePlotToThread = TRUE;
+}
 
 void smartPlot_interleaved( const void* inDataToPlot,
                             ePlotDataTypes inDataType,
