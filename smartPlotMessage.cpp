@@ -67,7 +67,6 @@ static unsigned short g_plotPort = 2000;
 // Parameters for dealing with the background plot thread.
 static PLOTTER_BOOL g_plotThread_created = FALSE;
 static unsigned int g_plotThread_defaultTimeMs = 250;
-static CREATE_PLOT_MUTEX(g_plotThread_onlyOnePlotThread);
 
 #ifdef PLOTTER_FORCE_BACKGROUND_THREAD
 static PLOTTER_BOOL g_plotThread_forcePlotToThread = TRUE;
@@ -169,8 +168,6 @@ static void* smartPlot_flushThread(void* p_threadParams)
       pthread_setschedparam(thisPthread, threadParams.policy, &schedParam);
    }
 #endif
-
-   plotThreading_mutexLock(&g_plotThread_onlyOnePlotThread); // Lock this one time and never unlock to ensure only 1 thread.
 
    while(1)
    {
