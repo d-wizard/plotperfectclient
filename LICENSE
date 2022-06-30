@@ -1,7 +1,7 @@
 COPYRIGHT TEXT:
 ---------------
 
-Copyright 2017 - 2018 Dan Williams. All Rights Reserved.
+Copyright 2017 - 2018, 2022 Dan Williams. All Rights Reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
@@ -22,9 +22,9 @@ DEALINGS IN THE SOFTWARE.
 FILES:
 plotMsgTypes.h
 plotThreading.h
-sendMemoryToPlot.c
+sendMemoryToPlot.cpp
 sendMemoryToPlot.h
-smartPlotMessage.c
+smartPlotMessage.cpp
 smartPlotMessage.h
 timePlot.h
 sendTCPPacket.h
