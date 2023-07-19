@@ -1,4 +1,4 @@
-/* Copyright 2017 - 2019, 2021 - 2022 Dan Williams. All Rights Reserved.
+/* Copyright 2017 - 2019, 2021 - 2023 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -315,7 +315,7 @@ void smartPlot_interleaved( const void* inDataToPlot,
       char* readLocationPtr = (char*)inDataToPlot;
       int memberSize = PLOT_DATA_TYPE_SIZES[plot_x->t_plotMem.e_dataType];
 
-      int numSampAlreadyInBuff = (int)plot_x->i_writeIndex - (int)plot_x->i_readIndex;
+      int numSampAlreadyInBuff = (int)writeIndex - (int)plot_x->i_readIndex;
       if(numSampAlreadyInBuff < 0)
          numSampAlreadyInBuff += plot_x->t_plotMem.i_numSamples;
 
@@ -344,8 +344,11 @@ void smartPlot_interleaved( const void* inDataToPlot,
          }
       }
 
-      plot_x->i_writeIndex = writeIndex;
-      plot_y->i_writeIndex = writeIndex;
+      if(numSampWritten > 0) // Only modify write index if it is changing.
+      {
+         plot_x->i_writeIndex = writeIndex;
+         plot_y->i_writeIndex = writeIndex;
+      }
 
       // Never update plot if update size is greater than the plot size.
       if(plot_x->t_plotMem.i_numSamples >= (unsigned int)updateSize)
@@ -358,8 +361,8 @@ void smartPlot_interleaved( const void* inDataToPlot,
             sendMemoryToPlot_Create1D(plot_y);
 
             // By sending the Create plot, all the data has been read. Set the read index to the write index.
-            plot_x->i_readIndex = plot_x->i_writeIndex;
-            plot_y->i_readIndex = plot_y->i_writeIndex;
+            plot_x->i_readIndex = writeIndex;
+            plot_y->i_readIndex = writeIndex;
          }
          else if(numSampWritten >= numSampLeftForPlotSend)
          {
@@ -449,7 +452,7 @@ void smartPlot_1D( const void* inDataToPlot,
       char* readLocationPtr = (char*)inDataToPlot;
       int memberSize = PLOT_DATA_TYPE_SIZES[plot->t_plotMem.e_dataType];
 
-      int numSampAlreadyInBuff = (int)plot->i_writeIndex - (int)plot->i_readIndex;
+      int numSampAlreadyInBuff = (int)writeIndex - (int)plot->i_readIndex;
       if(numSampAlreadyInBuff < 0)
          numSampAlreadyInBuff += plot->t_plotMem.i_numSamples;
 
@@ -478,8 +481,8 @@ void smartPlot_1D( const void* inDataToPlot,
          }
       }
 
-      plot->i_writeIndex = writeIndex;
-
+      if(numSampWritten > 0) // Only modify write index if it is changing.
+         plot->i_writeIndex = writeIndex;
 
       // Never update plot if update size is greater than the plot size.
       if(plot->t_plotMem.i_numSamples >= (unsigned int)updateSize)
@@ -491,7 +494,7 @@ void smartPlot_1D( const void* inDataToPlot,
             sendMemoryToPlot_Create1D(plot);
 
             // By sending the Create plot, all the data has been read. Set the read index to the write index.
-            plot->i_readIndex = plot->i_writeIndex;
+            plot->i_readIndex = writeIndex;
          }
          else if(numSampWritten >= numSampLeftForPlotSend)
          {
@@ -597,7 +600,7 @@ void smartPlot_2D( const void* inDataToPlotX,
       int memberSizeX = PLOT_DATA_TYPE_SIZES[plot->t_plotMem.e_dataType];
       int memberSizeY = PLOT_DATA_TYPE_SIZES[plot->t_plotMem_separateYAxis.e_dataType];
 
-      int numSampAlreadyInBuff = (int)plot->i_writeIndex - (int)plot->i_readIndex;
+      int numSampAlreadyInBuff = (int)writeIndex - (int)plot->i_readIndex;
       if(numSampAlreadyInBuff < 0)
          numSampAlreadyInBuff += plot->t_plotMem.i_numSamples;
 
@@ -630,8 +633,8 @@ void smartPlot_2D( const void* inDataToPlotX,
          }
       }
 
-      plot->i_writeIndex = writeIndex;
-
+      if(numSampWritten > 0) // Only modify write index if it is changing.
+         plot->i_writeIndex = writeIndex;
 
       // Never update plot if update size is greater than the plot size.
       if(plot->t_plotMem.i_numSamples >= (unsigned int)updateSize)
@@ -643,7 +646,7 @@ void smartPlot_2D( const void* inDataToPlotX,
             sendMemoryToPlot_Create2D(plot);
 
             // By sending the Create plot, all the data has been read. Set the read index to the write index.
-            plot->i_readIndex = plot->i_writeIndex;
+            plot->i_readIndex = writeIndex;
          }
          else if(numSampWritten >= numSampLeftForPlotSend)
          {
