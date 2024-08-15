@@ -32,7 +32,7 @@ add_library(${projName} SHARED ${source})
 
 # Specify Flags, defines, and includes
 target_compile_options(${projName} PRIVATE ${c_cppFlags})
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${cppOnlyFlags})
+target_compile_options(${projName} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${cppOnlyFlags}>)
 target_compile_definitions(${projName} PRIVATE ${defines})
 target_include_directories(${projName} PRIVATE ${includes})
 
