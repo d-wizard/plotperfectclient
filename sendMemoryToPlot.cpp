@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2024 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -61,7 +61,7 @@ static CREATE_PLOT_MUTEX(gt_sendMemToPlot_mutex);
 //*****************************************************************************
 // Local Function Prototypes
 //*****************************************************************************
-static int sendPlotPacket(tSendMemToPlot* _this, const char* msg, unsigned int msgSize);
+static int sendPlotPacket(tSendMemToPlot* _this, const char* msg, unsigned int msgSize, int isGroupFinalMsg);
 static tPlotMsgCallback determinePlotMsgGenCallback(tSendMemToPlot* _this);
 
 
@@ -92,8 +92,7 @@ void plotMsgGroupEnd()
          memcpy(&g_groupPlot_memory[4], &plotMsgSize, 4);
 
          // Send the message to the plotter.
-         g_groupPlotMsgs = 0; // Clear the group message flag so the group message actually gets sent to the plotter.
-         sendPlotPacket(g_groupSendMemToPlotPtr, g_groupPlot_memory, plotMsgSize);
+         sendPlotPacket(g_groupSendMemToPlotPtr, g_groupPlot_memory, plotMsgSize, 1);
          free(g_groupPlot_memory);
       }
 
@@ -286,7 +285,7 @@ void sendMemoryToPlot_Create1D(tSendMemToPlot* _this)
                           _this->t_plotMem.i_bytesBetweenValues );
    }
 
-   sendPlotPacket(_this, msg, plotMsgSize);
+   sendPlotPacket(_this, msg, plotMsgSize, 0);
 
    free(msg);
 }
@@ -331,7 +330,7 @@ void sendMemoryToPlot_Create2D(tSendMemToPlot* _this)
                           _this->t_plotMem_separateYAxis.i_bytesBetweenValues );
    }
 
-   sendPlotPacket(_this, msg, plotMsgSize);
+   sendPlotPacket(_this, msg, plotMsgSize, 0);
 
    free(msg);
 }
@@ -355,7 +354,7 @@ void sendMemoryToPlot_Create2D_Interleaved(tSendMemToPlot* _this)
 
    packCreate2dPlotMsg_Interleaved(&plot, _this->t_plotMem.pc_memory, msg);
 
-   sendPlotPacket(_this, msg, plotMsgSize);
+   sendPlotPacket(_this, msg, plotMsgSize, 0);
 
    free(msg);
 }
@@ -427,13 +426,13 @@ void sendMemoryToPlot_Update1D(tSendMemToPlot* _this)
 
       if(msg1 != NULL)
       {
-         sendPlotPacket(_this, msg1, plotMsgSize1);
+         sendPlotPacket(_this, msg1, plotMsgSize1, 0);
          free(msg1);
       }
 
       if(msg2 != NULL)
       {
-         sendPlotPacket(_this, msg2, plotMsgSize2);
+         sendPlotPacket(_this, msg2, plotMsgSize2, 0);
          free(msg2);
       }
    }
@@ -524,13 +523,13 @@ void sendMemoryToPlot_Update2D(tSendMemToPlot* _this)
       if(msg1 != NULL)
       {
 
-         sendPlotPacket(_this, msg1, plotMsgSize1);
+         sendPlotPacket(_this, msg1, plotMsgSize1, 0);
          free(msg1);
       }
 
       if(msg2 != NULL)
       {
-         sendPlotPacket(_this, msg2, plotMsgSize2);
+         sendPlotPacket(_this, msg2, plotMsgSize2, 0);
          free(msg2);
       }
    }
@@ -609,29 +608,33 @@ void sendMemoryToPlot_Update2D_Interleaved(tSendMemToPlot* _this)
       if(msg1 != NULL)
       {
 
-         sendPlotPacket(_this, msg1, plotMsgSize1);
+         sendPlotPacket(_this, msg1, plotMsgSize1, 0);
          free(msg1);
       }
 
       if(msg2 != NULL)
       {
-         sendPlotPacket(_this, msg2, plotMsgSize2);
+         sendPlotPacket(_this, msg2, plotMsgSize2, 0);
          free(msg2);
       }
    }
 }
 
-static int sendPlotPacket(tSendMemToPlot* _this, const char* msg, unsigned int msgSize)
+static int sendPlotPacket(tSendMemToPlot* _this, const char* msg, unsigned int msgSize, int isGroupFinalMsg)
 {
    int retVal = -1;
    const char* ipAddr = _this->pc_ipAddr;
    unsigned short ipPort = _this->s_ipPort;
 
-   if(g_groupPlotMsgs)
+   plotThreading_mutexLock(&gt_sendMemToPlot_mutex); // If this is on the group plot thread, the recursive mutex will return immediately. On an other thread this will return when the group plot thread is done.
+
+   if(g_groupPlotMsgs && !isGroupFinalMsg)
    {
-      plotMsgGroupAdd(_this, msg, msgSize);
+      plotMsgGroupAdd(_this, msg, msgSize); // This is being called from the group plot thread and this isn't the final message, so just queue it up.
       return 0;
    }
+
+   plotThreading_mutexLock(&gt_sendMemToPlot_mutex);
 
    if(_this->b_closeSocketAfterSend)
    {
@@ -840,7 +843,7 @@ void sendMemoryToPlot_Interleaved1DPlots(tSendMemToPlot* xAxis, tSendMemToPlot* 
       }
       yAxis_sendMem->i_readIndex = yAxis_writeIndex;
 
-      sendPlotPacket(xAxis, multiPlotMsg, newMsgSize);
+      sendPlotPacket(xAxis, multiPlotMsg, newMsgSize, 0);
 
       free(multiPlotMsg);
    }

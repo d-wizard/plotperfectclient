@@ -1,4 +1,4 @@
-/* Copyright 2017, 2021 - 2022 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021 - 2022, 2024 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -56,7 +56,7 @@ typedef struct
    #include <thread>
    #include <mutex>
 
-   typedef std::mutex tPlotMutex;
+   typedef std::recursive_mutex tPlotMutex;
    typedef std::thread tPlotThread;
 
    #define CREATE_PLOT_MUTEX(variableName) tPlotMutex variableName
@@ -101,7 +101,7 @@ typedef struct
    typedef pthread_mutex_t tPlotMutex;
    typedef pthread_t tPlotThread;
 
-   #define CREATE_PLOT_MUTEX(variableName) tPlotMutex variableName = PTHREAD_MUTEX_INITIALIZER
+   #define CREATE_PLOT_MUTEX(variableName) tPlotMutex variableName = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
    static inline tPlotThread* plotThreading_createNewThread(plotThreading_threadCallback threadCallback, unsigned int timeBetweenMs)
    {
