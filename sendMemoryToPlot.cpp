@@ -631,10 +631,10 @@ static int sendPlotPacket(tSendMemToPlot* _this, const char* msg, unsigned int m
    if(g_groupPlotMsgs && !isGroupFinalMsg)
    {
       plotMsgGroupAdd(_this, msg, msgSize); // This is being called from the group plot thread and this isn't the final message, so just queue it up.
+      plotThreading_mutexUnlock(&gt_sendMemToPlot_mutex); // Unlock before early return.
       return 0;
    }
-
-   plotThreading_mutexLock(&gt_sendMemToPlot_mutex);
+   plotThreading_mutexUnlock(&gt_sendMemToPlot_mutex); // Unlock now that we know this isn't an early return.
 
    if(_this->b_closeSocketAfterSend)
    {
