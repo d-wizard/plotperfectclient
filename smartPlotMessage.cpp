@@ -1,4 +1,4 @@
-/* Copyright 2017 - 2019, 2021 - 2023 Dan Williams. All Rights Reserved.
+/* Copyright 2017 - 2019, 2021 - 2024 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -73,6 +73,8 @@ static PLOTTER_BOOL g_plotThread_forcePlotToThread = TRUE;
 #else
 static PLOTTER_BOOL g_plotThread_forcePlotToThread = FALSE;
 #endif
+
+static int MAX_VALUE_BYTES = 32*1024*1024; // 32 MiB
 
 
 //*****************************************************************************
@@ -268,6 +270,7 @@ void smartPlot_interleaved( const void* inDataToPlot,
       plot_x->t_plotMem.e_dataType = inDataType;
       plot_x->t_plotMem.e_plotDim = E_PLOT_1D;
       plot_x->t_plotMem.i_bytesBetweenValues = 2 * memberSize;
+      plot_x->t_plotMem.i_maxNumValues = MAX_VALUE_BYTES / plot_x->t_plotMem.i_bytesBetweenValues;
       plot_x->t_plotMem.i_dataSizeBytes = memberSize;
       plot_x->t_plotMem.i_numSamples = plotSize;
       plot_x->t_plotMem.pc_memory = (char*)newMem;
@@ -420,6 +423,7 @@ void smartPlot_1D( const void* inDataToPlot,
       plot->t_plotMem.e_dataType = inDataType;
       plot->t_plotMem.e_plotDim = E_PLOT_1D;
       plot->t_plotMem.i_bytesBetweenValues = memberSize;
+      plot->t_plotMem.i_maxNumValues = MAX_VALUE_BYTES / plot->t_plotMem.i_bytesBetweenValues;
       plot->t_plotMem.i_dataSizeBytes = memberSize;
       plot->t_plotMem.i_numSamples = plotSize;
       plot->t_plotMem.pc_memory = (char*)newMem;
@@ -561,6 +565,10 @@ void smartPlot_2D( const void* inDataToPlotX,
       plot->t_plotMem_separateYAxis.i_dataSizeBytes = memberSizeY;
       plot->t_plotMem_separateYAxis.pc_memory = (char*)newMemY;
 
+      // Set i_maxNumValues based on the sum of the size of both types.
+      plot->t_plotMem.i_maxNumValues = MAX_VALUE_BYTES / (plot->t_plotMem.i_bytesBetweenValues + plot->t_plotMem_separateYAxis.i_bytesBetweenValues);
+      plot->t_plotMem_separateYAxis.i_maxNumValues = plot->t_plotMem.i_maxNumValues;
+
       sendMemoryToPlot_Init( plot, g_plotHostName, g_plotPort, TRUE, plotName, curveName);
    }
    else if(plotSize != (int)plot->t_plotMem.i_numSamples && plotSize > 0 && isPlotDataTypeValid(plot->t_plotMem.e_dataType) && isPlotDataTypeValid(plot->t_plotMem_separateYAxis.e_dataType))
@@ -661,47 +669,41 @@ void smartPlot_2D( const void* inDataToPlotX,
 
 void smartPlot_flush_all()
 {
-   if(gt_smartPlotList != NULL)
+   // int keepLooping = 1; // Keep looping until nothing has been sent.
+   // while(keepLooping)
    {
-      tSmartPlotListElem* smartPlotList = gt_smartPlotList;
-      smartPlot_groupMsgStart(); // Send all flushed plots as one big message.
-      do
+      if(gt_smartPlotList != NULL)
       {
-         if(smartPlotList->interleavedPair != NULL)
+         tSmartPlotListElem* smartPlotList = gt_smartPlotList;
+         plotMsgGroupStart(); // Send all flushed plots as one big message.
+         do
          {
-            // This is an interleaved plot. Only plot interleaved as X, Y. Not Y, X.
-            if(smartPlotList->interleaved_isXAxis)
+            if(smartPlotList->interleavedPair != NULL)
             {
-               smartPlot_flush_interleaved( smartPlotList->cur.pc_plotName,
-                                            smartPlotList->cur.pc_curveName, // X Axis
-                                            smartPlotList->interleavedPair->cur.pc_curveName ); // Y Axis
+               // This is an interleaved plot. Only plot interleaved as X, Y. Not Y, X.
+               if(smartPlotList->interleaved_isXAxis)
+               {
+                  smartPlot_flush_interleaved( smartPlotList->cur.pc_plotName,
+                                             smartPlotList->cur.pc_curveName, // X Axis
+                                             smartPlotList->interleavedPair->cur.pc_curveName ); // Y Axis
+               }
             }
-         }
-         else if(smartPlotList->cur.t_plotMem.e_plotDim == E_PLOT_2D)
-         {
-            // This is NOT an interleaved plot, flush as 2D.
-            smartPlot_flush_2D(smartPlotList->cur.pc_plotName, smartPlotList->cur.pc_curveName);
-         }
-         else
-         {
-            // This is NOT an interleaved plot, flush as 1D.
-            smartPlot_flush_1D(smartPlotList->cur.pc_plotName, smartPlotList->cur.pc_curveName);
-         }
-         smartPlotList = smartPlotList->next;
-      }while(smartPlotList != gt_smartPlotList);// List is circular. When it wraps back to beginning of the list, stop looping.
-      smartPlot_groupMsgEnd(); // Send the big group message with all the flushed plot messages.
+            else if(smartPlotList->cur.t_plotMem.e_plotDim == E_PLOT_2D)
+            {
+               // This is NOT an interleaved plot, flush as 2D.
+               smartPlot_flush_2D(smartPlotList->cur.pc_plotName, smartPlotList->cur.pc_curveName);
+            }
+            else
+            {
+               // This is NOT an interleaved plot, flush as 1D.
+               smartPlot_flush_1D(smartPlotList->cur.pc_plotName, smartPlotList->cur.pc_curveName);
+            }
+            smartPlotList = smartPlotList->next;
+         }while(smartPlotList != gt_smartPlotList/* && plotMsgGroupGetCurSize() < MAX_VALUE_BYTES*/);// List is circular. When it wraps back to beginning of the list, stop looping.
+         /*keepLooping =*/ plotMsgGroupEnd(); // Send the big group message with all the flushed plot messages. Keep Looping as long as something has been sent.
+         // printf("keepLooping = %d\n", keepLooping);
+      }
    }
-}
-
-
-void smartPlot_groupMsgStart()
-{
-   plotMsgGroupStart();
-}
-
-void smartPlot_groupMsgEnd()
-{
-   plotMsgGroupEnd();
 }
 
 

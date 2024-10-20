@@ -1,4 +1,4 @@
-/* Copyright 2017 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2024 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -45,6 +45,7 @@ typedef struct
 
    PLOTTER_BOOL   b_arrayOfStructs;
    unsigned int   i_bytesBetweenValues;
+   int            i_maxNumValues;
 }tPlotMemory;
 
 // tSendMemToPlot defines all the information about creating plot messages.
@@ -103,7 +104,8 @@ void sendMemoryToPlot_Update2D_Interleaved(tSendMemToPlot* _this);
 void sendMemoryToPlot_Interleaved1DPlots(tSendMemToPlot* xAxis, tSendMemToPlot* yAxis);
 
 void plotMsgGroupStart();
-void plotMsgGroupEnd();
+int plotMsgGroupEnd(); // return 1 if something was sent, 0 if nothing was sent.
+int plotMsgGroupGetCurSize();
 
 #ifdef __cplusplus
 }

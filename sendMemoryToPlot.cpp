@@ -74,8 +74,9 @@ void plotMsgGroupStart()
    g_groupPlotMsgs = 1;
 }
 
-void plotMsgGroupEnd()
+int plotMsgGroupEnd()
 {
+   int sentSomething = 0;
    if(g_groupPlotMsgs)
    {
       if(g_groupPlot_memory != NULL)
@@ -94,6 +95,7 @@ void plotMsgGroupEnd()
          // Send the message to the plotter.
          sendPlotPacket(g_groupSendMemToPlotPtr, g_groupPlot_memory, plotMsgSize, 1);
          free(g_groupPlot_memory);
+         sentSomething = 1;
       }
 
       g_groupPlot_memory = NULL;
@@ -102,6 +104,12 @@ void plotMsgGroupEnd()
       g_groupPlotMsgs = 0;
       plotThreading_mutexUnlock(&gt_sendMemToPlot_mutex);
    }
+   return sentSomething;
+}
+
+int plotMsgGroupGetCurSize()
+{
+   return g_groupPlot_curSize;
 }
 
 static void plotMsgGroupAdd(tSendMemToPlot* _this, const char* msg, unsigned int size)

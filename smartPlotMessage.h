@@ -206,34 +206,6 @@ void smartPlot_2D( const void* inDataToPlotX,
                    const char* plotName,
                    const char* curveName );
 
-/**************************************************************************
-Function:     smartPlot_groupMsgStart
-
-Description:  This function is used to group a bunch of separate plot
-              messages into one big message. Under some circumstances, it
-              is helpful to have multiple plot messages hit the plot GUI at
-              the same time.
-
-              Once this function is called, all plot messages that would
-              normally be sent right away will be stored off until
-              smartPlot_groupMsgEnd is called, at which point all the
-              separate plot messages will be sent as one big message.
-
-*/
-void smartPlot_groupMsgStart();
-
-/**************************************************************************
-Function:     smartPlot_groupMsgEnd
-
-Description:  This function will send all the grouped messages that have been
-              stored off to the plot GUI. After this function is called, all
-              subsequent plot messages will be sent as normal until
-              smartPlot_groupMsgStart is called again.
-
-*/
-void smartPlot_groupMsgEnd();
-
-
 
 /**************************************************************************
 Function:     smartPlot_flush_interleaved
