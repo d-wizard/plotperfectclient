@@ -1,4 +1,4 @@
-/* Copyright 2017 - 2019, 2021 - 2023 Dan Williams. All Rights Reserved.
+/* Copyright 2017 - 2019, 2021 - 2023, 2025 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -796,6 +796,16 @@ void smartPlot_getTime(tSmartPlotTime* pTime)
 #endif
 }
 
+void smartPlot_sleep(float sleepTimeSec)
+{
+#ifdef PLOT_THREADING_USE_CPP11_TYPES
+   std::this_thread::sleep_for(std::chrono::microseconds(int64_t(sleepTimeSec * 1e6 + 0.5))); // Use c++ sleep_for
+#elif defined TIME_PLOT_WINDOWS
+   Sleep((int)(sleepTimeSec * 1e3 + 0.5)); // Legacy Windows 'Sleep' function (input is milliseconds)
+#else
+   usleep((int)(sleepTimeSec * 1e6 + 0.5)); // Legacy Unix 'usleep' function (input is microseconds)
+#endif
+}
 
 
 
