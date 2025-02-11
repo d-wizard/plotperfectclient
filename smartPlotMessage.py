@@ -277,16 +277,25 @@ def createFlushThread_withPriorityPolicy(sleepBetweenFlush_ms: int, priority: in
 
 ################################################################################
 
-def plotList_1D(plotList, plotSize: int, updateSize: int, plotName: str, curveName: str):
+def _listToBytes(plotList):
+   retValType = E_INVALID_DATA_TYPE
+   retValBytes = bytes()
    if len(plotList) > 0:
       if type(plotList[0]) is int:
-         plotBytes = bytes()
          for val in plotList:
-            plotBytes += val.to_bytes(8, 'little', signed=True) # Store as signed 64 bit
-         plot1D(plotBytes, E_INT_64, len(plotList), plotSize, updateSize, plotName, curveName)
+            retValBytes += val.to_bytes(8, 'little', signed=True) # Store as signed 64 bit
+         retValType = E_INT_64
       elif type(plotList[0]) is float:
-         plotBytes = bytes()
          for val in plotList:
-            plotBytes += struct.pack('d', val)
-         plot1D(plotBytes, E_FLOAT_64, len(plotList), plotSize, updateSize, plotName, curveName)
+            retValBytes += struct.pack('d', val)
+         retValType = E_FLOAT_64
+   return retValType, retValBytes
+
+
+################################################################################
+
+def plotList_1D(plotList, plotSize: int, updateSize: int, plotName: str, curveName: str):
+   plotType, plotBytes = _listToBytes(plotList)
+   if plotType != E_INVALID_DATA_TYPE and len(plotBytes) > 0:
+      plot1D(plotBytes, plotType, len(plotList), plotSize, updateSize, plotName, curveName)
 
