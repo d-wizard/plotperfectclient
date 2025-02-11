@@ -1,6 +1,7 @@
 # Provide an interface for calling Smart Plot Message functionality from the Plot Perfect Client library.
 from ctypes import *
 import os
+import struct
 
 ################################################################################
 E_INT_8             = 0
@@ -273,3 +274,19 @@ def createFlushThread_withPriorityPolicy(sleepBetweenFlush_ms: int, priority: in
    global plotLib
    _plotterInit()
    plotLib.smartPlot_createFlushThread_withPriorityPolicy(sleepBetweenFlush_ms)
+
+################################################################################
+
+def plotList_1D(plotList, plotSize: int, updateSize: int, plotName: str, curveName: str):
+   if len(plotList) > 0:
+      if type(plotList[0]) is int:
+         plotBytes = bytes()
+         for val in plotList:
+            plotBytes += val.to_bytes(8, 'little', signed=True) # Store as signed 64 bit
+         plot1D(plotBytes, E_INT_64, len(plotList), plotSize, updateSize, plotName, curveName)
+      elif type(plotList[0]) is float:
+         plotBytes = bytes()
+         for val in plotList:
+            plotBytes += struct.pack('d', val)
+         plot1D(plotBytes, E_FLOAT_64, len(plotList), plotSize, updateSize, plotName, curveName)
+
