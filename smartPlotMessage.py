@@ -291,11 +291,25 @@ def _listToBytes(plotList):
          retValType = E_FLOAT_64
    return retValType, retValBytes
 
-
 ################################################################################
 
 def plotList_1D(plotList, plotSize: int, updateSize: int, plotName: str, curveName: str):
    plotType, plotBytes = _listToBytes(plotList)
    if plotType != E_INVALID_DATA_TYPE and len(plotBytes) > 0:
       plot1D(plotBytes, plotType, len(plotList), plotSize, updateSize, plotName, curveName)
+
+################################################################################
+
+def plotList_interleaved(plotList, plotSize: int, updateSize: int, plotName: str, curveName_x: str, curveName_y: str):
+   plotType, plotBytes = _listToBytes(plotList)
+   if plotType != E_INVALID_DATA_TYPE and len(plotBytes) > 0:
+      plotInterleaved(plotBytes, plotType, len(plotList)/2, plotSize, updateSize, plotName, curveName_x, curveName_y)
+
+################################################################################
+
+def plotList_2D(plotListX, plotListY, plotSize: int, updateSize: int, plotName: str, curveName: str):
+   plotTypeX, plotBytesX = _listToBytes(plotListX)
+   plotTypeY, plotBytesY = _listToBytes(plotListY)
+   if plotTypeX != E_INVALID_DATA_TYPE and len(plotBytesX) > 0 and plotTypeY != E_INVALID_DATA_TYPE and len(plotBytesY) > 0:
+      plot2D(plotBytesX, plotTypeX, plotBytesY, plotTypeY, min(len(plotListX),min(plotListY)), plotSize, updateSize, plotName, curveName)
 
