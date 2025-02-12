@@ -3,6 +3,12 @@ from ctypes import *
 import os
 import struct
 
+try:
+   import numpy as np
+   hasNumPy = True
+except:
+   hasNumPy = False
+
 ################################################################################
 E_INT_8             = 0
 E_UINT_8            = 1
@@ -282,12 +288,20 @@ def _listToBytes(plotList):
    retValBytes = bytes()
    if len(plotList) > 0:
       if type(plotList[0]) is int:
-         for val in plotList:
-            retValBytes += val.to_bytes(8, 'little', signed=True) # Store as signed 64 bit
+         if hasNumPy:
+            retValBytes = np.array(plotList, dtype=np.int64)
+         else:
+            # No NumPy, brute force generate (slower)
+            for val in plotList:
+               retValBytes += val.to_bytes(8, 'little', signed=True) # Store as signed 64 bit
          retValType = E_INT_64
       elif type(plotList[0]) is float:
-         for val in plotList:
-            retValBytes += struct.pack('d', val)
+         if hasNumPy:
+            retValBytes = np.array(plotList, dtype=np.float64)
+         else:
+            # No NumPy, brute force generate (slower)
+            for val in plotList:
+               retValBytes += struct.pack('d', val)
          retValType = E_FLOAT_64
    return retValType, retValBytes
 
