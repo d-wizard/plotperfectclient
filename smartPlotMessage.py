@@ -38,7 +38,7 @@ def _plotterInit():
       def tryToLoadLib(pathToLib):
          global plotLib
          try:
-            print(pathToLib)
+            # print(pathToLib)
             plotLib = cdll.LoadLibrary(pathToLib)
          except:
             pass
