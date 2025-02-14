@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2017 - 2019, 2021 - 2022 Dan Williams. All Rights Reserved.
+ * Copyright 2017 - 2019, 2021 - 2022, 2025 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -359,6 +359,50 @@ Arguments:    pTime (Out) - Pointer to the time struct that will be filled in.
 Returns:      None.
 */
 void smartPlot_getTime(tSmartPlotTime* pTime);
+
+/**************************************************************************
+Function:     smartPlot_sleep
+
+Description:  Provides a platform-agnostic method for sleeping.
+
+Arguments:    sleepTimeSec - Time to sleep in seconds.
+
+Returns:      None.
+*/
+void smartPlot_sleep(float sleepTimeSec);
+
+
+
+/**************************************************
+ * Smart Plot Classes
+ **************************************************/
+#ifdef __cplusplus
+
+// Class for setting up background thread / sleeping before exiting.
+// The idea here is this will be created in the main() function
+// and the destructor will wait a little bit to ensure everything is
+// flushed before main() exits.
+class SmartPlotFlushThreadSetup
+{
+public:
+   SmartPlotFlushThreadSetup(unsigned int sleepBetweenFlush_ms)
+      : sleepBetweenFlush(float(sleepBetweenFlush_ms*1e-3))
+   {
+      smartPlot_createFlushThread(sleepBetweenFlush_ms);
+   }
+   SmartPlotFlushThreadSetup(unsigned int sleepBetweenFlush_ms, int priority, int policy)
+      : sleepBetweenFlush(float(sleepBetweenFlush_ms * 1e-3))
+   { 
+      smartPlot_createFlushThread_withPriorityPolicy(sleepBetweenFlush_ms, priority, policy);
+   }
+   virtual ~SmartPlotFlushThreadSetup()
+   {
+      smartPlot_sleep(float(sleepBetweenFlush * 1.5 + 0.2)); // Make sure to sleep a little while longer than the flush period.
+   }
+   float sleepBetweenFlush;
+};
+
+#endif
 
 #ifdef __cplusplus
 }

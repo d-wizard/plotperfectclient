@@ -1,6 +1,13 @@
 # Provide an interface for calling Smart Plot Message functionality from the Plot Perfect Client library.
 from ctypes import *
 import os
+import struct
+
+try:
+   import numpy as np
+   hasNumPy = True
+except:
+   hasNumPy = False
 
 ################################################################################
 E_INT_8             = 0
@@ -37,7 +44,7 @@ def _plotterInit():
       def tryToLoadLib(pathToLib):
          global plotLib
          try:
-            print(pathToLib)
+            # print(pathToLib)
             plotLib = cdll.LoadLibrary(pathToLib)
          except:
             pass
@@ -273,3 +280,50 @@ def createFlushThread_withPriorityPolicy(sleepBetweenFlush_ms: int, priority: in
    global plotLib
    _plotterInit()
    plotLib.smartPlot_createFlushThread_withPriorityPolicy(sleepBetweenFlush_ms)
+
+################################################################################
+
+def _listToBytes(plotList):
+   retValType = E_INVALID_DATA_TYPE
+   retValBytes = bytes()
+   if len(plotList) > 0:
+      if type(plotList[0]) is int:
+         if hasNumPy:
+            retValBytes = np.array(plotList, dtype=np.int64)
+         else:
+            # No NumPy, brute force generate (slower)
+            for val in plotList:
+               retValBytes += val.to_bytes(8, 'little', signed=True) # Store as signed 64 bit
+         retValType = E_INT_64
+      elif type(plotList[0]) is float:
+         if hasNumPy:
+            retValBytes = np.array(plotList, dtype=np.float64)
+         else:
+            # No NumPy, brute force generate (slower)
+            for val in plotList:
+               retValBytes += struct.pack('d', val)
+         retValType = E_FLOAT_64
+   return retValType, retValBytes
+
+################################################################################
+
+def plotList_1D(plotList, plotSize: int, updateSize: int, plotName: str, curveName: str):
+   plotType, plotBytes = _listToBytes(plotList)
+   if plotType != E_INVALID_DATA_TYPE and len(plotBytes) > 0:
+      plot1D(plotBytes, plotType, len(plotList), plotSize, updateSize, plotName, curveName)
+
+################################################################################
+
+def plotList_interleaved(plotList, plotSize: int, updateSize: int, plotName: str, curveName_x: str, curveName_y: str):
+   plotType, plotBytes = _listToBytes(plotList)
+   if plotType != E_INVALID_DATA_TYPE and len(plotBytes) > 0:
+      plotInterleaved(plotBytes, plotType, len(plotList)/2, plotSize, updateSize, plotName, curveName_x, curveName_y)
+
+################################################################################
+
+def plotList_2D(plotListX, plotListY, plotSize: int, updateSize: int, plotName: str, curveName: str):
+   plotTypeX, plotBytesX = _listToBytes(plotListX)
+   plotTypeY, plotBytesY = _listToBytes(plotListY)
+   if plotTypeX != E_INVALID_DATA_TYPE and len(plotBytesX) > 0 and plotTypeY != E_INVALID_DATA_TYPE and len(plotBytesY) > 0:
+      plot2D(plotBytesX, plotTypeX, plotBytesY, plotTypeY, min(len(plotListX),min(plotListY)), plotSize, updateSize, plotName, curveName)
+
