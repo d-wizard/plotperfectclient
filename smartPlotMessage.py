@@ -327,3 +327,26 @@ def plotList_2D(plotListX, plotListY, plotSize: int, updateSize: int, plotName: 
    if plotTypeX != E_INVALID_DATA_TYPE and len(plotBytesX) > 0 and plotTypeY != E_INVALID_DATA_TYPE and len(plotBytesY) > 0:
       plot2D(plotBytesX, plotTypeX, plotBytesY, plotTypeY, min(len(plotListX),min(plotListY)), plotSize, updateSize, plotName, curveName)
 
+################################################################################
+
+def plotAuto(sampToPlot, plotSize: int, updateSize: int, plotName: str, curveName: str):
+    if hasNumPy:
+        # Check for numpy types
+        if type(sampToPlot) == np.ndarray and len(sampToPlot) > 0: # Check for numpy array
+            realNpTypeToPlotType = { \
+                np.int8: E_INT_8, np.uint8: E_UINT_8, np.int16: E_INT_16, np.uint16: E_UINT_16, np.int32: E_INT_32, \
+                np.uint32: E_UINT_32, np.int64: E_INT_64, np.uint64: E_UINT_64, np.float32: E_FLOAT_32, np.float64: E_FLOAT_64}
+            # Handle compatible numpy types
+            npType = type(sampToPlot[0])
+            try:
+                plot1D(sampToPlot, realNpTypeToPlotType[npType], len(sampToPlot), plotSize, updateSize, plotName, curveName)
+                return # Always return after successfully sending a plot message
+            except:
+                try: # Try as complex numbers
+                    realSeparate = np.real(sampToPlot)
+                    imagSeparate = np.imag(sampToPlot)
+                    plot1D(realSeparate, realNpTypeToPlotType[type(realSeparate[0])], len(sampToPlot), plotSize, updateSize, plotName, curveName + "_re")
+                    plot1D(imagSeparate, realNpTypeToPlotType[type(imagSeparate[0])], len(sampToPlot), plotSize, updateSize, plotName, curveName + "_im")
+                    return # Always return after successfully sending a plot message
+                except:
+                    pass
