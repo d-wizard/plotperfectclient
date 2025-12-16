@@ -1,4 +1,4 @@
-/* Copyright 2017, 2021 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021, 2025 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -28,6 +28,10 @@
 #include "smartPlotMessage.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**************************************************************************
 Function:     timePlot_1D
 
@@ -37,12 +41,7 @@ Description:  Adds a plot point with the current time as the Y Axis point.
               See smartPlot_1D Description in smartPlotMessage.h for more
               info about the input parameters.
 */
-static inline void timePlot_1D(int plotSize, int updateSize, const char* plotName, const char* curveName)
-{
-   tSmartPlotTime nowTime;
-   smartPlot_getTime(&nowTime);
-   smartPlot_1D(&nowTime, E_TIME_STRUCT_AUTO, 1, plotSize, updateSize, plotName, curveName);
-}
+void timePlot_1D(int plotSize, int updateSize, const char* plotName, const char* curveName);
 
 /**************************************************************************
 Function:     timePlot_2D
@@ -54,18 +53,13 @@ Description:  Adds a plot point with the current time as the X Axis point and
               See smartPlot_2D Description in smartPlotMessage.h for more
               info about the input parameters.
 */
-static inline void timePlot_2D(
+void timePlot_2D(
    const void* inDataToPlotY,
    ePlotDataTypes inDataTypeY,
    int plotSize,
    int updateSize,
    const char* plotName,
-   const char* curveName)
-{
-   tSmartPlotTime nowTime;
-   smartPlot_getTime(&nowTime);
-   smartPlot_2D(&nowTime, E_TIME_STRUCT_AUTO, inDataToPlotY, inDataTypeY, 1, plotSize, updateSize, plotName, curveName);
-}
+   const char* curveName);
 
 /**************************************************************************
 Function:     timePlot_2D_Int
@@ -77,17 +71,16 @@ Description:  Adds a plot point with the current time as the X Axis point and
               See smartPlot_2D Description in smartPlotMessage.h for more
               info about the input parameters.
 */
-static inline void timePlot_2D_Int(
+void timePlot_2D_Int(
    long num,
    int plotSize,
    int updateSize,
    const char* plotName,
-   const char* curveName)
-{
-   tSmartPlotTime nowTime;
-   smartPlot_getTime(&nowTime);
-   smartPlot_2D(&nowTime, E_TIME_STRUCT_AUTO, &num, E_INT_32, 1, plotSize, updateSize, plotName, curveName);
+   const char* curveName);
+
+#ifdef __cplusplus
 }
+#endif
 
 
 #endif /* TIMEPLOT_H_ */

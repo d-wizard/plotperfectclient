@@ -22,6 +22,7 @@
 #include <time.h>
 #include "sendMemoryToPlot.h"
 #include "smartPlotMessage.h"
+#include "timePlot.h" // Some functions are defined in this header.
 #include "plotThreading.h"
 #include "sendTCPPacket.h"
 
@@ -807,5 +808,46 @@ void smartPlot_sleep(float sleepTimeSec)
 #endif
 }
 
+
+/**************************************************************************
+Function:     timePlot_1D
+*/
+void timePlot_1D(int plotSize, int updateSize, const char* plotName, const char* curveName)
+{
+   tSmartPlotTime nowTime;
+   smartPlot_getTime(&nowTime);
+   smartPlot_1D(&nowTime, E_TIME_STRUCT_AUTO, 1, plotSize, updateSize, plotName, curveName);
+}
+
+/**************************************************************************
+Function:     timePlot_2D
+*/
+void timePlot_2D(
+   const void* inDataToPlotY,
+   ePlotDataTypes inDataTypeY,
+   int plotSize,
+   int updateSize,
+   const char* plotName,
+   const char* curveName)
+{
+   tSmartPlotTime nowTime;
+   smartPlot_getTime(&nowTime);
+   smartPlot_2D(&nowTime, E_TIME_STRUCT_AUTO, inDataToPlotY, inDataTypeY, 1, plotSize, updateSize, plotName, curveName);
+}
+
+/**************************************************************************
+Function:     timePlot_2D_Int
+*/
+void timePlot_2D_Int(
+   long num,
+   int plotSize,
+   int updateSize,
+   const char* plotName,
+   const char* curveName)
+{
+   tSmartPlotTime nowTime;
+   smartPlot_getTime(&nowTime);
+   smartPlot_2D(&nowTime, E_TIME_STRUCT_AUTO, &num, E_INT_32, 1, plotSize, updateSize, plotName, curveName);
+}
 
 
