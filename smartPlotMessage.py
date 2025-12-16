@@ -1,5 +1,5 @@
 # Provide an interface for calling Smart Plot Message functionality from the Plot Perfect Client library.
-from ctypes import *
+import ctypes
 import os
 import struct
 
@@ -45,7 +45,7 @@ def _plotterInit():
          global plotLib
          try:
             # print(pathToLib)
-            plotLib = cdll.LoadLibrary(pathToLib)
+            plotLib = ctypes.cdll.LoadLibrary(pathToLib)
          except:
             pass
 
@@ -326,4 +326,61 @@ def plotList_2D(plotListX, plotListY, plotSize: int, updateSize: int, plotName: 
    plotTypeY, plotBytesY = _listToBytes(plotListY)
    if plotTypeX != E_INVALID_DATA_TYPE and len(plotBytesX) > 0 and plotTypeY != E_INVALID_DATA_TYPE and len(plotBytesY) > 0:
       plot2D(plotBytesX, plotTypeX, plotBytesY, plotTypeY, min(len(plotListX),min(plotListY)), plotSize, updateSize, plotName, curveName)
+
+
+################################################################################
+################################################################################
+################################################################################
+
+def timePlot_1D(
+         plotSize: int,
+         updateSize: int,
+         plotName: str,
+         curveName: str):
+   global plotLib
+   _plotterInit()
+   plotLib.timePlot_1D(
+      int(plotSize),
+      int(updateSize),
+      _strToBytes(plotName),
+      _strToBytes(curveName)
+   )
+
+################################################################################
+
+def timePlot_2D(
+         inDataToPlotY: bytes,
+         inDataTypeY: int,
+         plotSize: int,
+         updateSize: int,
+         plotName: str,
+         curveName: str):
+   global plotLib
+   _plotterInit()
+   plotLib.timePlot_2D(
+      bytes(inDataToPlotY),
+      int(inDataTypeY),
+      int(plotSize),
+      int(updateSize),
+      _strToBytes(plotName),
+      _strToBytes(curveName)
+   )
+
+################################################################################
+
+def timePlot_2D_Int(
+         num: int,
+         plotSize: int,
+         updateSize: int,
+         plotName: str,
+         curveName: str):
+   global plotLib
+   _plotterInit()
+   plotLib.timePlot_2D_Int(
+      int(num),
+      int(plotSize),
+      int(updateSize),
+      _strToBytes(plotName),
+      _strToBytes(curveName)
+   )
 
