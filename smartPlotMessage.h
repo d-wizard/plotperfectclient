@@ -56,6 +56,7 @@ typedef enum
    E_FLOAT_64,
    E_TIME_STRUCT_64,
    E_TIME_STRUCT_128,
+   E_FLOAT_16, // Add to end to keep backward compatibility.
    E_INVALID_DATA_TYPE
 }ePlotDataTypes;
 

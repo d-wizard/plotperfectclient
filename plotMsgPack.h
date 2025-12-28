@@ -1,4 +1,4 @@
-/* Copyright 2017, 2021 Dan Williams. All Rights Reserved.
+/* Copyright 2017, 2021, 2025 Dan Williams. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -66,7 +66,8 @@ static const int PLOT_DATA_TYPE_SIZES[]=
    sizeof(PLOTTER_FLOAT_32),
    sizeof(PLOTTER_FLOAT_64),
    sizeof(PLOTTER_UINT_32) + sizeof(PLOTTER_UINT_32), // E_TIME_STRUCT_64
-   sizeof(PLOTTER_UINT_64) + sizeof(PLOTTER_UINT_64)  // E_TIME_STRUCT_128
+   sizeof(PLOTTER_UINT_64) + sizeof(PLOTTER_UINT_64),  // E_TIME_STRUCT_128
+   sizeof(PLOTTER_UINT_16) // E_FLOAT_16
 };
 
 

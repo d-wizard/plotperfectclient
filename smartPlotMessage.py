@@ -22,7 +22,8 @@ E_FLOAT_32          = 8
 E_FLOAT_64          = 9
 E_TIME_STRUCT_64    = 10
 E_TIME_STRUCT_128   = 11
-E_INVALID_DATA_TYPE = 12
+E_FLOAT_16          = 12
+E_INVALID_DATA_TYPE = 13
 
 ################################################################################
 plotLib = None
